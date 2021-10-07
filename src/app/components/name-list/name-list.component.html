@@ -1,0 +1,22 @@
+<ul class="list-group rounded-0">
+  <li class="list-group-item text-danger" *ngIf="!players.length; else playersRef">No name added.</li>
+  <ng-template #playersRef>
+    <li
+      class="list-group-item d-flex justify-content-between align-items-center"
+      *ngFor="let player of players; trackBy: trackPlayerBy"
+      (mouseleave)="onHover(null)"
+      (mouseenter)="onHover(player.id)"
+    >
+      <span><strong>{{ player.id }}.</strong> {{ player.name }}</span>
+      <small>
+        <strong>
+          <a
+            href="javascript:void"
+            class="text-sm text-danger"
+            (click)="removeName(player.id)"
+          >Remove</a>
+        </strong>
+      </small>
+    </li>
+  </ng-template>
+</ul>

@@ -1,1 +1,33 @@
 /* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap');
+
+body {
+  font-family: 'Quicksand', sans-serif;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 400px;
+  flex-grow: 0;
+}
+
+.app-add-name,
+.app-footer-actions {
+  flex-grow: 0;
+}
+
+.app-name-list {
+  flex-grow: 1;
+  overflow: auto;
+}
+
+.app-contents {
+  flex-grow: 1;
+}
