@@ -6,7 +6,7 @@ import { Player, Axis } from '../models/player.model';
   providedIn: 'root'
 })
 export class PlayersService {
-  private readonly defaultRadius = 8;
+  private readonly defaultRadius = 10;
   private width: number = 0;
   private height: number = 0;
 

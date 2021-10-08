@@ -80,7 +80,7 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
     this.ctx.stroke();
 
     if (this.playerId === id) {
-      this.ctx.fillStyle = "white";
+      this.ctx.fillStyle = "red";
       this.ctx.fill();
     }
   }
@@ -88,6 +88,20 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
   private play() {
     const callback = () => {
       this.players.forEach((player) => {
+        if (
+          player.pos.x - player.radius <= 0 ||
+          player.pos.x + player.radius >= this.canvas.width
+        ) {
+          player.dir.x = player.dir.x * -1;
+        }
+
+        if (
+          player.pos.y - player.radius <= 0 ||
+          player.pos.y + player.radius >= this.canvas.height
+        ) {
+          player.dir.y = player.dir.y * -1;
+        }
+
         player.pos.x += player.dir.x / 60;
         player.pos.y += player.dir.y / 60;
       });
