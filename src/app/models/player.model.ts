@@ -4,8 +4,11 @@ export interface Axis {
 }
 
 export interface Ball {
+  color: string;
+  name: string;
   radius: number;
   pos: Axis;
+  touchable?: boolean;
 }
 
 export interface Player extends Ball {

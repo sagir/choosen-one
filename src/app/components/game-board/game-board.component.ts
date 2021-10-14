@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, ViewChild } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Player } from 'src/app/models/player.model';
+import { Ball, Player } from 'src/app/models/player.model';
 import { PlayersService } from 'src/app/services/players.service';
 
 @Component({
@@ -21,6 +21,10 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
   private players!: Player[];
   private playerId: number | null = null;
   private animationFrameId: number | null = null;
+  private ball!: Ball;
+  private interval: any = null;
+
+  private winner?: Player;
 
   constructor(
     private playersService: PlayersService,
@@ -35,6 +39,8 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
     this.canvas.width = this.parent.clientWidth;
     this.canvas.height = this.parent.clientHeight;
 
+    // this.ball.pos.x = this.canvas.width / 2 - this.ball.radius;
+    // this.ball.pos.y = this.canvas.height / 2 - this.ball.radius;
     this.playersService.updateBoundary(this.canvas.height, this.canvas.width);
   }
 
@@ -44,6 +50,10 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
 
     const parent = this.canvas.parentElement as HTMLElement;
     this.parent = parent.parentElement as HTMLDivElement;
+
+    this.playersService.ball$
+      .pipe(takeUntil(this.ngUnsubscribe))
+      .subscribe(ball => this.ball = ball)
 
     this.playersService.players$
       .pipe(takeUntil(this.ngUnsubscribe))
@@ -58,13 +68,6 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
         this.playerId = playerId;
         this.redraw();
       });
-
-    this.play();
-  }
-
-  private redraw() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.players.forEach(player => this.drawPlayer(player));
   }
 
   public ngOnDestroy(): void {
@@ -72,45 +75,92 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
     this.ngUnsubscribe.complete();
   }
 
-  private drawPlayer({ pos, radius, id }: Player): void {
-    this.ctx.beginPath();
-    this.ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
-    this.ctx.strokeStyle = "white";
-    this.ctx.lineWidth = 1;
-    this.ctx.stroke();
-
-    if (this.playerId === id) {
-      this.ctx.fillStyle = "red";
-      this.ctx.fill();
-    }
+  private redraw() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.drawBall();
+    this.players.forEach(player => this.drawPlayer(player));
   }
 
-  private play() {
+  private drawBall() {
+    this.ctx.beginPath();
+    this.ctx.arc(this.ball.pos.x, this.ball.pos.y, this.ball.radius, 0, 2 * Math.PI);
+    this.ctx.fillStyle = this.ball.color;
+    this.ctx.fill();
+    this.ctx.closePath();
+
+    this.ctx.font = '20px Quicksand';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillStyle = "white";
+    this.ctx.fillText(this.ball.name, this.canvas.width / 2, this.canvas.height / 2 + 10);
+    this.ctx.restore();
+  }
+
+  private drawPlayer({ pos, radius, id, color }: Player): void {
+    this.ctx.beginPath();
+    this.ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI);
+    this.ctx.fillStyle = color;
+
+    if (this.playerId) {
+      this.ctx.globalAlpha = this.playerId == id ? 1 : .25;
+    } else {
+      this.ctx.globalAlpha = .8;
+    }
+
+    this.ctx.fill();
+    this.ctx.closePath();
+    this.ctx.restore();
+  }
+
+  public play() {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.playersService.updateBallName('Click to play');
+      this.animationFrameId = null;
+      this.redraw();
+      return;
+    }
+
     const callback = () => {
       this.players.forEach((player) => {
-        if (
-          player.pos.x - player.radius <= 0 ||
-          player.pos.x + player.radius >= this.canvas.width
-        ) {
-          player.dir.x = player.dir.x * -1;
-        }
+        const isTouching = this.playersService.resolveCollision(player, this.ball);
 
-        if (
-          player.pos.y - player.radius <= 0 ||
-          player.pos.y + player.radius >= this.canvas.height
-        ) {
-          player.dir.y = player.dir.y * -1;
+        if (this.ball.touchable && isTouching && !this.winner) {
+          this.winner = player;
+          console.log(this.winner.name);
+          this.animationFrameId && cancelAnimationFrame(this.animationFrameId);
+          this.animationFrameId = null;
+          this.redraw();
+          return;
         }
-
-        player.pos.x += player.dir.x / 60;
-        player.pos.y += player.dir.y / 60;
       });
+
+      if (this.winner) return;
 
       this.redraw();
       this.animationFrameId = requestAnimationFrame(callback);
     };
 
     this.animationFrameId = requestAnimationFrame(callback);
+    this.beginTick();
+  }
+
+  private beginTick(timeout: number = 10): void {
+    this.endTick();
+
+    this.playersService.updateBallName(`${timeout} Seconds`);
+
+    this.interval = this.window.setInterval(() => {
+      this.playersService.updateBallName(`${--timeout} Seconds`);
+
+      if (timeout <= 0) {
+        this.playersService.markBallAsTouchable();
+        this.endTick();
+      }
+    }, 1000);
+  }
+
+  private endTick(): void {
+    this.interval && this.window.clearInterval(this.interval);
   }
 
 }
