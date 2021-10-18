@@ -15,4 +15,5 @@ export interface Player extends Ball {
   name: string;
   id: number;
   dir: Axis;
+  opacity: number;
 }

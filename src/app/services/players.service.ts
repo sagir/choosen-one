@@ -50,6 +50,7 @@ export class PlayersService {
       id: this.max,
       radius: this.defaultRadius,
       pos: this.getPosition(players),
+      opacity: .75,
       dir: {
         x: randomDir * randomDirX,
         y: (6 - randomDir) * randomDirY
