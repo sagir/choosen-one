@@ -65,6 +65,8 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
     this.playersService.hoveredPlayerId$
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe((playerId: number | null) => {
+        if (this.winner) return;
+
         this.playerId = playerId;
         this.players.forEach(player => {
           if (!playerId) {
@@ -94,7 +96,7 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
   private drawBall() {
     this.ctx.beginPath();
     this.ctx.arc(this.ball.pos.x, this.ball.pos.y, this.ball.radius, 0, 2 * Math.PI);
-    this.ctx.fillStyle = this.ball.color;
+    this.ctx.fillStyle = 'white';// this.ball.color;
     this.ctx.globalAlpha = 1;
     this.ctx.fill();
     this.ctx.closePath();
@@ -204,7 +206,7 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
   private explodeBalls() {
     this.players.forEach(player => {
       if (player !== this.winner) {
-        if (player.opacity <= 0) {
+        if (player.opacity <= .01) {
           player.opacity = 0;
         } else {
           player.radius += .25;
