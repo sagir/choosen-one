@@ -26,7 +26,7 @@ export class PlayersService {
   private _ball$: BehaviorSubject<Ball> = new BehaviorSubject({
     color: '#e74c3c',
     name: 'Click to play',
-    radius: 100,
+    radius: 50,
     pos: { x: 1, y: 1 },
   });
   public readonly ball$: Observable<Ball>;

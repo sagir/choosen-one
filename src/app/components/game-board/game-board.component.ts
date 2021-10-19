@@ -101,10 +101,10 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
     this.ctx.fill();
     this.ctx.closePath();
 
-    this.ctx.font = '20px Quicksand';
+    this.ctx.font = '16px Quicksand';
     this.ctx.textAlign = 'center';
     this.ctx.fillStyle = "green";
-    this.ctx.fillText(this.ball.name, this.canvas.width / 2, this.canvas.height / 2 + 10);
+    this.ctx.fillText(this.ball.name, this.canvas.width / 2, this.canvas.height / 2 + 8);
     this.ctx.restore();
   }
 
@@ -204,18 +204,34 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
   }
 
   private explodeBalls() {
+    if (this.players.every(p => p.opacity <= 0) && this.animationFrameId) {
+      this.window.cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+      return;
+    }
+
     this.players.forEach(player => {
       if (player !== this.winner) {
         if (player.opacity <= .01) {
           player.opacity = 0;
         } else {
-          player.radius += .25;
+          player.radius += .5;
           player.opacity -= .01;
         }
       }
 
       return player;
-    })
+    });
+  }
+
+  public reset($event: Event): void {
+    $event.preventDefault();
+    this.play();
+    this.winner = undefined;
+    this.playersService.shuffle();
+    this.animationFrameId && this.window.cancelAnimationFrame(this.animationFrameId);
+    this.playersService.markBallAsUntouchable();
+    this.playersService.updateBallName('Click to play');
   }
 
 }
