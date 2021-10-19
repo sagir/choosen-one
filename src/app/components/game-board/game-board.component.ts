@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, ViewChild, ɵɵsetComponentScope } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, OnDestroy, ViewChild } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Ball, Player } from 'src/app/models/player.model';
@@ -66,20 +66,14 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe((playerId: number | null) => {
         if (this.winner) return;
-
         this.playerId = playerId;
-        this.players.forEach(player => {
-          if (!playerId) {
-            player.opacity = .75;
-          } else if (playerId == player.id) {
-            player.opacity = 1;
-          } else {
-            player.opacity = .25;
-          }
-        });
-
+        this.players.forEach(p => p.opacity = playerId === p.id ? 1 : (playerId ? .25 : .75))
         this.redraw();
       });
+
+    this.playersService.play$
+      .pipe(takeUntil(this.ngUnsubscribe))
+      .subscribe(play => play ? this.play() : this.pause());
   }
 
   public ngOnDestroy(): void {
@@ -119,56 +113,59 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
     this.ctx.restore();
   }
 
-  public play() {
-    if (this.animationFrameId) {
-      this.window.cancelAnimationFrame(this.animationFrameId);
-      this.playersService.updateBallName('Click to play');
-      this.animationFrameId = null;
-      this.redraw();
-      return;
-    }
+  public pause(): void {
+    if (!this.animationFrameId) return;
+    this.window.cancelAnimationFrame(this.animationFrameId);
+    this.animationFrameId = null;
+    this.playersService.updateBallName('Click to play');
+    this.redraw();
+  }
 
+  public play(): void {
     const callback = () => {
       let isTouching: boolean;
 
-      if (this.winner) return;
-
       for (let player of this.players) {
+        if (player === this.winner) continue;
         isTouching = this.playersService.resolveCollision(player, this.ball);
 
-        if (this.ball.touchable && isTouching && !this.winner) {
+        if (this.ball.touchable && isTouching) {
           this.winner = player;
+          this.playersService.markBallAsUntouchable();
           this.playersService.updateBallName(this.winner.name);
-          this.animationFrameId && this.window.cancelAnimationFrame(this.animationFrameId);
-          this.animationFrameId = null;
-          this.redraw();
-          this.beginWinnerAnimation();
-          break;
+          continue;
+        }
+
+        if (this.winner) {
+          this.increaseExplotion(player);
         }
       }
 
-      // this.players.forEach((player) => {
-      //   const isTouching = this.playersService.resolveCollision(player, this.ball);
-
-      //   if (this.ball.touchable && isTouching && !this.winner) {
-      //     this.winner = player;
-      //     this.playersService.updateBallName(this.winner.name);
-      //     this.animationFrameId && this.window.cancelAnimationFrame(this.animationFrameId);
-      //     this.animationFrameId = null;
-      //     this.redraw();
-      //     this.beginWinnerAnimation();
-      //     return;
-      //   }
-      // });
       this.redraw();
-      this.animationFrameId = this.window.requestAnimationFrame(callback);
+
+      if (this.winner && this.players.filter(p => p !== this.winner).every(p => p.opacity <= 0)) {
+        console.log('hi');
+        this.animationFrameId && this.window.cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = null;
+      } else {
+        this.animationFrameId = this.window.requestAnimationFrame(callback);
+      }
     };
 
     this.animationFrameId = this.window.requestAnimationFrame(callback);
     this.beginTick();
   }
 
-  private beginTick(timeout: number = 10): void {
+  private increaseExplotion(player: Player): void {
+    if (player.opacity <= .01) {
+      player.opacity = 0;
+    } else {
+      player.opacity -= .01;
+      player.radius += 1;
+    }
+  }
+
+  private beginTick(timeout: number = 2): void {
     this.endTick();
 
     this.playersService.updateBallName(`${timeout} Seconds`);
@@ -187,49 +184,13 @@ export class GameBoardComponent implements OnDestroy, AfterViewInit {
     this.interval && this.window.clearInterval(this.interval);
   }
 
-  private beginWinnerAnimation() {
-    if (this.animationFrameId) {
-      this.window.cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-      return;
-    }
-
-    const callback = () => {
-      this.explodeBalls();
-      this.redraw();
-      this.animationFrameId = this.window.requestAnimationFrame(callback);
-    }
-
-    this.animationFrameId = this.window.requestAnimationFrame(callback);
-  }
-
-  private explodeBalls() {
-    if (this.players.every(p => p.opacity <= 0) && this.animationFrameId) {
-      this.window.cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-      return;
-    }
-
-    this.players.forEach(player => {
-      if (player !== this.winner) {
-        if (player.opacity <= .01) {
-          player.opacity = 0;
-        } else {
-          player.radius += .5;
-          player.opacity -= .01;
-        }
-      }
-
-      return player;
-    });
-  }
-
   public reset($event: Event): void {
     $event.preventDefault();
     this.play();
     this.winner = undefined;
     this.playersService.shuffle();
     this.animationFrameId && this.window.cancelAnimationFrame(this.animationFrameId);
+    this.interval && this.window.clearInterval(this.interval);
     this.playersService.markBallAsUntouchable();
     this.playersService.updateBallName('Click to play');
   }

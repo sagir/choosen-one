@@ -31,11 +31,23 @@ export class PlayersService {
   });
   public readonly ball$: Observable<Ball>;
 
+  private _play$: Subject<boolean> = new Subject();
+  public readonly play$: Observable<boolean>;
+
   constructor() {
     this.hoveredPlayerId$ = this._hoveredPlayerId$.asObservable();
     this._hoveredPlayerId$.next(null);
     this.players$ = this._players$.asObservable();
+    this.play$ = this._play$.asObservable();
     this.ball$ = this._ball$.asObservable();
+  }
+
+  public play(): void {
+    this._play$.next(true);
+  }
+
+  public pause(): void {
+    this._play$.next(false);
   }
 
   public add(name: string): void {
@@ -165,7 +177,7 @@ export class PlayersService {
   }
 
   public shuffle(): void {
-    this._players$.next(this._players$.value.sort(() => .5 - Math.random()));
+    // this._players$.next(this._players$.value.sort(() => .5 - Math.random()));
     this.relocatePlayers();
   }
 
